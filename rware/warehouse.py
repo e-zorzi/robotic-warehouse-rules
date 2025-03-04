@@ -370,9 +370,9 @@ class Warehouse(gym.Env):
             if layer == ImageLayer.AGENT_DIRECTION:
                 # directions as int
                 layer_min = np.zeros(observation_shape, dtype=np.float32)
-                layer_max = np.ones(observation_shape, dtype=np.float32) * max(
-                    [d.value + 1 for d in Direction]
-                )
+                layer_max = np.ones(observation_shape, dtype=np.float32) * max([
+                    d.value + 1 for d in Direction
+                ])
             else:
                 # binary layer
                 layer_min = np.zeros(observation_shape, dtype=np.float32)
@@ -398,13 +398,11 @@ class Warehouse(gym.Env):
         self.image_obs = False
         self.image_dict_obs = True
         feature_space = gym.spaces.Dict(
-            OrderedDict(
-                {
-                    "direction": gym.spaces.Discrete(4),
-                    "on_highway": gym.spaces.MultiBinary(1),
-                    "carrying_shelf": gym.spaces.MultiBinary(1),
-                }
-            )
+            OrderedDict({
+                "direction": gym.spaces.Discrete(4),
+                "on_highway": gym.spaces.MultiBinary(1),
+                "carrying_shelf": gym.spaces.MultiBinary(1),
+            })
         )
 
         feature_flat_dim = gym.spaces.flatdim(feature_space)
@@ -416,14 +414,10 @@ class Warehouse(gym.Env):
         )
 
         return gym.spaces.Tuple(
-            tuple(
-                [
-                    gym.spaces.Dict(
-                        {"image": image_obs_space, "features": feature_space}
-                    )
-                    for _ in range(self.n_agents)
-                ]
-            )
+            tuple([
+                gym.spaces.Dict({"image": image_obs_space, "features": feature_space})
+                for _ in range(self.n_agents)
+            ])
         )
 
     def _use_slow_obs(self):
@@ -458,48 +452,38 @@ class Warehouse(gym.Env):
         )
 
         self_observation_dict_space = gym.spaces.Dict(
-            OrderedDict(
-                {
-                    "location": location_space,
-                    "carrying_shelf": gym.spaces.MultiBinary(1),
-                    "direction": gym.spaces.Discrete(4),
-                    "on_highway": gym.spaces.MultiBinary(1),
-                }
-            )
-        )
-        sensor_per_location_dict = OrderedDict(
-            {
-                "has_agent": gym.spaces.MultiBinary(1),
+            OrderedDict({
+                "location": location_space,
+                "carrying_shelf": gym.spaces.MultiBinary(1),
                 "direction": gym.spaces.Discrete(4),
-            }
+                "on_highway": gym.spaces.MultiBinary(1),
+            })
         )
+        sensor_per_location_dict = OrderedDict({
+            "has_agent": gym.spaces.MultiBinary(1),
+            "direction": gym.spaces.Discrete(4),
+        })
         if self.msg_bits > 0:
             sensor_per_location_dict["local_message"] = gym.spaces.MultiBinary(
                 self.msg_bits
             )
-        sensor_per_location_dict.update(
-            {
-                "has_shelf": gym.spaces.MultiBinary(1),
-                "shelf_requested": gym.spaces.MultiBinary(1),
-            }
-        )
+        sensor_per_location_dict.update({
+            "has_shelf": gym.spaces.MultiBinary(1),
+            "shelf_requested": gym.spaces.MultiBinary(1),
+        })
         return gym.spaces.Tuple(
-            tuple(
-                [
-                    gym.spaces.Dict(
-                        OrderedDict(
-                            {
-                                "self": self_observation_dict_space,
-                                "sensors": gym.spaces.Tuple(
-                                    self._obs_sensor_locations
-                                    * (gym.spaces.Dict(sensor_per_location_dict),)
-                                ),
-                            }
-                        )
-                    )
-                    for _ in range(self.n_agents)
-                ]
-            )
+            tuple([
+                gym.spaces.Dict(
+                    OrderedDict({
+                        "self": self_observation_dict_space,
+                        "sensors": gym.spaces.Tuple(
+                            self._obs_sensor_locations
+                            * (gym.spaces.Dict(sensor_per_location_dict),)
+                        ),
+                    })
+                )
+                for _ in range(self.n_agents)
+            ])
         )
 
     def _use_fast_obs(self):
@@ -543,7 +527,7 @@ class Warehouse(gym.Env):
                 elif layer_type == ImageLayer.AGENTS:
                     layer = self.grid[_LAYER_AGENTS].copy().astype(np.float32)
                     # set all occupied agent cells to 1.0 (instead of agent ID)
-                    layer[layer > 0.0] = 1.0
+                    # layer[layer > 0.0] = 1.0
                     # print("AGENTS LAYER")
                 elif layer_type == ImageLayer.AGENT_DIRECTION:
                     layer = np.zeros(self.grid_size, dtype=np.float32)
@@ -668,9 +652,10 @@ class Warehouse(gym.Env):
                 if id_shelf == 0:
                     obs.write([0.0, 0.0])  # no shelf or requested shelf
                 else:
-                    obs.write(
-                        [1.0, int(self.shelfs[id_shelf - 1] in self.request_queue)]
-                    )  # shelf presence and request status
+                    obs.write([
+                        1.0,
+                        int(self.shelfs[id_shelf - 1] in self.request_queue),
+                    ])  # shelf presence and request status
             return obs.vector
 
         # write dictionary observations
@@ -730,12 +715,10 @@ class Warehouse(gym.Env):
             direction = np.zeros(4)
             direction[agent.dir.value] = 1.0
             feature_obs.write(direction)
-            feature_obs.write(
-                [
-                    int(self._is_highway(agent.x, agent.y)),
-                    int(agent.carrying_shelf is not None),
-                ]
-            )
+            feature_obs.write([
+                int(self._is_highway(agent.x, agent.y)),
+                int(agent.carrying_shelf is not None),
+            ])
             return {
                 "image": image_obs,
                 "features": feature_obs.vector,
@@ -1052,3 +1035,68 @@ if __name__ == "__main__":
         # env.render()
         actions = env.action_space.sample()
         env.step(actions)
+
+import gymnasium as gym
+import numpy as np
+
+
+class ExtractRulesWrapperRWARE(gym.Wrapper):
+    _counter = 0
+    _actions_map = {
+        0: "noop",
+        1: "move(north)",
+        2: "move(south)",
+        3: "move(west)",
+        4: "move(east)",
+        5: "load",
+    }
+    _actions = set(_actions_map.values())
+
+    def __init__(self, env, ego_id=1):
+        super().__init__(env)
+        self.ego_id = ego_id
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+
+        atoms = [f"ego_agent({self.ego_id})"]
+
+        # Agent positions
+        for agent in self.unwrapped.agents:
+            agent_id = agent.id
+            pos = np.where(obs[:, :, 0] == agent_id)
+            y, x = pos[0].item(), pos[1].item()
+            if agent_id == self.ego_id:
+                atoms.append(f"at_ego({x}, {y})")
+            else:
+                atoms.append(f"at_agent({agent_id}, {x}, {y})")
+            # Also check if an agent is carrying a shelf. In case, add the atom
+            if agent.carrying_shelf is not None:
+                atoms.append(f"carrying({obs[y, x, 0]}, {agent.carrying_shelf.id})")
+
+        # Shelves positions
+        for shelf_id in [s.id for s in self.unwrapped.shelfs]:
+            pos = np.where(obs[:, :, 1:] == shelf_id)
+            y, x = pos[0].item(), pos[1].item()
+            atoms.append(f"at_shelf({shelf_id}, {x}, {y})")
+
+        # Good shelves
+        for shelf_id in self.unwrapped.request_queue_id:
+            atoms.append(f"good({shelf_id})")
+
+        actions = [action, *info["opponent_actions"]]
+        action = self._actions_map[actions[self.ego_id - 1]]
+        excluded = self._actions - set([action])
+
+        # TODO (add reward cost)
+        info["example"] = (
+            f"#pos(e{self._counter}, {{{action}}}, {{{', '.join(excluded)}}}, {{{'.'.join(atoms)}.}})."
+        )
+        self._counter += 1
+        return obs, reward, terminated, truncated, info
+
+    def reset(self, seed=None):
+        return self.env.reset(seed=seed)
+
+    def reset_counter(self):
+        self._counter = 0
