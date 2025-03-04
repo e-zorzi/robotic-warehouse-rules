@@ -70,7 +70,7 @@ def image_registration():
                 "shelf_columns": _sizes[size][1],
                 "n_agents": agents,
                 "msg_bits": 0,
-                "sensor_range": 1,
+                "sensor_range": sensor_range,
                 "request_queue_size": int(agents * _difficulty[diff]),
                 "max_inactivity_steps": None,
                 "max_steps": 500,
