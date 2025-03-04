@@ -5,6 +5,7 @@ from gymnasium import register
 from rware.warehouse import RewardType, ObservationType
 
 _sizes = {
+    "ultratiny": (1, 1),
     "tiny": (1, 3),
     "small": (2, 3),
     "medium": (2, 5),
